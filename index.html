@@ -43,9 +43,27 @@
         .study-card {
             page-break-inside: avoid;
             break-inside: avoid;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .study-card:hover {
+            transform: translateY(-3px);
+        }
+        .tab-btn.active {
+            background-color: #0f172a;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+        }
+        .pyramid-level {
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+        .pyramid-level:hover {
+            transform: scale(1.04);
+            filter: brightness(1.1);
         }
         @media print {
             .no-print { display: none !important; }
+            .tab-panel { display: block !important; }
             body { background-color: white; }
             .shadow-lg, .shadow-md, .shadow-xl { box-shadow: none !important; border: 1px solid #cbd5e1; }
         }
@@ -53,21 +71,38 @@
 </head>
 <body class="text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
 
+    <!-- Notificación Toast Flotante -->
+    <div id="toast-msg" class="no-print fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 transition-all">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toast-text">Acción completada</span>
+    </div>
+
     <!-- Barra Superior de Herramientas -->
-    <div class="no-print sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-3 flex flex-wrap justify-between items-center gap-3 shadow-sm">
+    <div class="no-print sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 md:px-6 py-3 flex flex-wrap justify-between items-center gap-3 shadow-sm">
         <div class="flex items-center space-x-2">
             <i data-lucide="activity" class="text-blue-600 w-6 h-6"></i>
-            <span class="font-bold text-slate-800 tracking-tight">EpiGraph Ecuador <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full ml-1 border border-amber-300">Evidencia Nacional</span></span>
+            <span class="font-bold text-slate-800 tracking-tight">EpiGraph Ecuador <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full ml-1 border border-amber-300">Interactivo</span></span>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <button onclick="filterStudies('all')" id="btn-all" class="px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-800 text-white transition">Todos (7)</button>
-            <button onclick="filterStudies('observacional')" id="btn-obs" class="px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Observacionales (5)</button>
-            <button onclick="filterStudies('experimental')" id="btn-exp" class="px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Experimentales (2)</button>
-            <button onclick="downloadDirectPDF()" id="btn-pdf" class="ml-2 flex items-center space-x-1.5 px-4 py-1.5 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm">
+
+        <!-- Buscador Rápido -->
+        <div class="relative flex-1 max-w-xs hidden md:block">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="search-input" oninput="searchStudies(this.value)" placeholder="Buscar: Orozco, OR, Loja, Cotopaxi..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="filterStudies('all')" id="btn-all" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-white transition">Todos (7)</button>
+            <button onclick="filterStudies('observacional')" id="btn-obs" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Observacionales (5)</button>
+            <button onclick="filterStudies('experimental')" id="btn-exp" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Experimentales (2)</button>
+            <button onclick="toggleAllTabsMode()" id="btn-expand-tabs" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition flex items-center gap-1" title="Mostrar todas las pestañas a la vez o modo compacto">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                <span id="expand-tabs-text">Modo Pestañas</span>
+            </button>
+            <button onclick="downloadDirectPDF()" id="btn-pdf" class="ml-1 flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm">
                 <i data-lucide="download" class="w-4 h-4"></i>
                 <span id="pdf-btn-text">Descargar PDF Directo</span>
             </button>
-            <button onclick="window.print()" class="flex items-center space-x-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm">
+            <button onclick="window.print()" class="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm">
                 <i data-lucide="printer" class="w-4 h-4"></i>
                 <span>Imprimir</span>
             </button>
@@ -153,7 +188,7 @@
                                 <i data-lucide="eye" class="w-5 h-5"></i>
                                 <span>1. ESTUDIOS OBSERVACIONALES</span>
                             </div>
-                            <span class="text-xs bg-blue-800 px-2.5 py-0.5 rounded-full">El investigador observa y mide, pero NO interviene</span>
+                            <span class="text-xs bg-blue-800 px-2.5 py-0.5 rounded-full">Haz clic en cualquier diseño para ir a su tarjeta</span>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,17 +199,17 @@
                                     <span class="text-[11px] font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Generan Hipótesis</span>
                                 </div>
                                 <ul class="space-y-2.5 text-xs text-slate-700">
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-1')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-teal-50 border border-transparent hover:border-teal-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-teal-500 mt-1 shrink-0"></span>
-                                        <div><strong>Reporte y Series de Casos:</strong> Frecuencias (%), Media (&mu;), Desviación Estándar (DE).</div>
+                                        <div><strong>1. Reporte y Series de Casos:</strong> Frecuencias (%), Media (&mu;), Desviación Estándar (DE). <span class="text-teal-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-2')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0"></span>
-                                        <div><strong>Estudios Ecológicos:</strong> Coeficiente de correlación (<em>r</em> de Pearson / Spearman), Regresión (&beta;).</div>
+                                        <div><strong>2. Estudios Ecológicos:</strong> Coeficiente de correlación (<em>r</em> de Pearson / Spearman), Regresión (&beta;). <span class="text-emerald-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-3')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-cyan-50 border border-transparent hover:border-cyan-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 mt-1 shrink-0"></span>
-                                        <div><strong>Transversales (De Corte):</strong> Prevalencia (P), Razón de Prevalencias (RP), OR de prevalencia.</div>
+                                        <div><strong>3. Transversales (De Corte):</strong> Prevalencia (P), Razón de Prevalencias (RP), Coeficiente &beta;. <span class="text-cyan-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
                                 </ul>
                             </div>
@@ -186,13 +221,13 @@
                                     <span class="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">Prueban Hipótesis</span>
                                 </div>
                                 <ul class="space-y-2.5 text-xs text-slate-700">
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-4')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mt-1 shrink-0"></span>
-                                        <div><strong>Casos y Controles (Efecto &rarr; Causa):</strong> Razón de Momios u <em>Odds Ratio</em> (OR = [a&middot;d] / [b&middot;c]), IC 95%, &chi;&sup2;.</div>
+                                        <div><strong>4. Casos y Controles (Efecto &rarr; Causa):</strong> Razón de Momios u <em>Odds Ratio</em> (OR = [a&middot;d] / [b&middot;c]), IC 95%, &chi;&sup2;. <span class="text-indigo-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-5')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-blue-50 border border-transparent hover:border-blue-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-blue-600 mt-1 shrink-0"></span>
-                                        <div><strong>Estudios de Cohortes (Causa &rarr; Efecto):</strong> Incidencia Acumulada (IA), Densidad de Incidencia (DI), Riesgo Relativo (RR = I<sub>exp</sub> / I<sub>no exp</sub>).</div>
+                                        <div><strong>5. Estudios de Cohortes (Causa &rarr; Efecto):</strong> Incidencia Acumulada (IA), Riesgo Relativo (RR = I<sub>exp</sub> / I<sub>no exp</sub>). <span class="text-blue-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
                                 </ul>
                             </div>
@@ -214,13 +249,13 @@
                                     <span class="text-[11px] font-semibold bg-purple-50 text-purple-700 px-2 py-0.5 rounded">Máxima Causalidad</span>
                                 </div>
                                 <ul class="space-y-2.5 text-xs text-slate-700">
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-6')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-purple-50 border border-transparent hover:border-purple-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-purple-600 mt-1 shrink-0"></span>
-                                        <div><strong>Ensayo Clínico Aleatorizado (ECA):</strong> RR, Reducción Relativa del Riesgo (RRR), Reducción Absoluta (RAR), Número Necesario a Tratar (NNT).</div>
+                                        <div><strong>6. Ensayo Clínico Aleatorizado (ECA):</strong> RR, Reducción Relativa del Riesgo (RRR), Número Necesario a Tratar (NNT). <span class="text-purple-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
-                                    <li class="flex items-start gap-2 p-1.5 rounded hover:bg-slate-50">
+                                    <li onclick="scrollToStudy('study-7')" class="cursor-pointer flex items-start gap-2 p-2 rounded-lg hover:bg-fuchsia-50 border border-transparent hover:border-fuchsia-200 transition">
                                         <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-600 mt-1 shrink-0"></span>
-                                        <div><strong>Ensayos Comunitarios y de Campo:</strong> Diferencia de Tasas de Incidencia (&Delta;TI), Fracción Prevenible Poblacional (FPP), OR/RR ajustado por conglomerado.</div>
+                                        <div><strong>7. Ensayos Comunitarios y de Campo:</strong> Diferencia de Tasas (&Delta;TI), OR/RR ajustado por conglomerado. <span class="text-fuchsia-700 font-semibold underline ml-1">Ir &rarr;</span></div>
                                     </li>
                                 </ul>
                             </div>
@@ -235,12 +270,174 @@
             </div>
         </section>
 
+        <!-- =======================================================
+             NUEVO LABORATORIO INTERACTIVO: SIMULADOR Y ASISTENTE
+             ======================================================= -->
+        <section class="no-print mb-14 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-indigo-500/30">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-800/60 pb-5 mb-6">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider bg-indigo-500/30 text-indigo-200 px-3 py-1 rounded-full border border-indigo-400/30">Módulo Práctico Interactivo</span>
+                    <h2 class="text-2xl font-extrabold mt-2 flex items-center gap-2">
+                        <i data-lucide="Cpu" class="w-6 h-6 text-amber-400"></i>
+                        <span>Laboratorio Epidemiológico Interactivo</span>
+                    </h2>
+                    <p class="text-xs text-slate-300 mt-1">Simula el cálculo de estadísticos (OR, RR, RP, NNT) con datos del Ecuador o usa el árbol de decisión para elegir el diseño correcto.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="loadPreset('cuenca')" class="text-xs bg-indigo-600/80 hover:bg-indigo-500 px-3 py-1.5 rounded-lg font-semibold border border-indigo-400/40 transition">Cargar Caso Cuenca (SDR Neonatal)</button>
+                    <button onclick="loadPreset('cotopaxi')" class="text-xs bg-purple-600/80 hover:bg-purple-500 px-3 py-1.5 rounded-lg font-semibold border border-purple-400/40 transition">Cargar ECA Cotopaxi (Proyecto Lulun)</button>
+                    <button onclick="loadPreset('esmeraldas')" class="text-xs bg-fuchsia-600/80 hover:bg-fuchsia-500 px-3 py-1.5 rounded-lg font-semibold border border-fuchsia-400/40 transition">Cargar Esmeraldas (Ivermectina)</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Calculadora Tabla 2x2 (7 columnas) -->
+                <div class="lg:col-span-7 bg-slate-800/80 rounded-2xl p-5 border border-slate-700">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <i data-lucide="calculator" class="w-4 h-4"></i> Calculadora Bioestadística en Vivo (Tabla Tetracórica 2&times;2)
+                        </h3>
+                        <span id="preset-label" class="text-[11px] bg-slate-700 text-slate-200 px-2.5 py-0.5 rounded-md">Datos: Hospital IESS Cuenca (Cesárea y SDR)</span>
+                    </div>
+
+                    <div class="overflow-x-auto mb-4">
+                        <table class="w-full text-xs text-center border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900/90 text-slate-300">
+                                    <th class="p-2.5 border border-slate-700 text-left">Grupo / Exposición</th>
+                                    <th class="p-2.5 border border-slate-700 text-rose-300">Con Evento / Enfermos (+)</th>
+                                    <th class="p-2.5 border border-slate-700 text-emerald-300">Sin Evento / Sanos (&minus;)</th>
+                                    <th class="p-2.5 border border-slate-700 text-slate-400">Total Fila</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="bg-slate-800/50">
+                                    <td class="p-2.5 border border-slate-700 font-bold text-left text-blue-300">Expuestos / Intervenidos</td>
+                                    <td class="p-2 border border-slate-700">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span class="font-bold text-amber-400">a:</span>
+                                            <input type="number" id="cell-a" value="136" min="0" oninput="recalc2x2()" class="w-20 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-center font-bold text-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                        </div>
+                                    </td>
+                                    <td class="p-2 border border-slate-700">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span class="font-bold text-amber-400">b:</span>
+                                            <input type="number" id="cell-b" value="184" min="0" oninput="recalc2x2()" class="w-20 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-center font-bold text-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                        </div>
+                                    </td>
+                                    <td id="row-exp-total" class="p-2.5 border border-slate-700 font-mono text-slate-300">320</td>
+                                </tr>
+                                <tr class="bg-slate-800/50">
+                                    <td class="p-2.5 border border-slate-700 font-bold text-left text-slate-300">No Expuestos / Controles</td>
+                                    <td class="p-2 border border-slate-700">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span class="font-bold text-amber-400">c:</span>
+                                            <input type="number" id="cell-c" value="52" min="0" oninput="recalc2x2()" class="w-20 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-center font-bold text-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                        </div>
+                                    </td>
+                                    <td class="p-2 border border-slate-700">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span class="font-bold text-amber-400">d:</span>
+                                            <input type="number" id="cell-d" value="192" min="0" oninput="recalc2x2()" class="w-20 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-center font-bold text-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                        </div>
+                                    </td>
+                                    <td id="row-noexp-total" class="p-2.5 border border-slate-700 font-mono text-slate-300">244</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resultados Calculados en Tiempo Real -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                        <div class="bg-slate-900/90 p-3 rounded-xl border border-indigo-500/40">
+                            <span class="text-[10px] uppercase text-indigo-300 font-bold block">Casos y Controles</span>
+                            <span class="text-xs text-slate-400">Odds Ratio (OR)</span>
+                            <div id="res-or" class="text-lg font-extrabold text-white stat-badge mt-0.5">2.73</div>
+                            <span id="res-or-ci" class="text-[10px] text-slate-400 font-mono">IC95%: 1.87–3.99</span>
+                        </div>
+                        <div class="bg-slate-900/90 p-3 rounded-xl border border-blue-500/40">
+                            <span class="text-[10px] uppercase text-blue-300 font-bold block">Cohortes / Transv.</span>
+                            <span class="text-xs text-slate-400">Riesgo Relativo (RR/RP)</span>
+                            <div id="res-rr" class="text-lg font-extrabold text-white stat-badge mt-0.5">1.99</div>
+                            <span id="res-inc" class="text-[10px] text-slate-400 font-mono">I<sub>e</sub>: 42.5% | I<sub>0</sub>: 21.3%</span>
+                        </div>
+                        <div class="bg-slate-900/90 p-3 rounded-xl border border-purple-500/40">
+                            <span class="text-[10px] uppercase text-purple-300 font-bold block">Ensayo Clínico (ECA)</span>
+                            <span class="text-xs text-slate-400">Cambio Relativo (RRR)</span>
+                            <div id="res-rrr" class="text-lg font-extrabold text-white stat-badge mt-0.5">+99.4%</div>
+                            <span id="res-rar" class="text-[10px] text-slate-400 font-mono">Dif. Abs: +21.2%</span>
+                        </div>
+                        <div class="bg-slate-900/90 p-3 rounded-xl border border-emerald-500/40">
+                            <span class="text-[10px] uppercase text-emerald-300 font-bold block">Impacto Clínico</span>
+                            <span class="text-xs text-slate-400">NNT / NNH (1/|RAR|)</span>
+                            <div id="res-nnt" class="text-lg font-extrabold text-white stat-badge mt-0.5">5</div>
+                            <span class="text-[10px] text-slate-400">Pacientes a tratar/exponer</span>
+                        </div>
+                    </div>
+
+                    <div id="calc-interpretation" class="text-xs bg-indigo-950/90 border border-indigo-700/60 text-indigo-200 px-3.5 py-2.5 rounded-xl flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                        <span><strong>Interpretación automática:</strong> OR &gt; 1 y RR &gt; 1 indican que la exposición actúa como un <strong>Factor de Riesgo</strong> estadísticamente significativo.</span>
+                    </div>
+                </div>
+
+                <!-- Asistente Árbol de Decisión (5 columnas) -->
+                <div class="lg:col-span-5 bg-slate-800/80 rounded-2xl p-5 border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-300 mb-2 flex items-center gap-1.5">
+                            <i data-lucide="compass" class="w-4 h-4"></i> Asistente: ¿Qué Estudio Epidemiológico Elegir?
+                        </h3>
+                        <p class="text-xs text-slate-300 mb-4">Selecciona las características de tu investigación para identificar el diseño y su estadístico correspondiente:</p>
+
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">1. ¿El investigador asigna/manipula activamente la exposición?</label>
+                                <select id="wiz-q1" onchange="updateWizard()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-emerald-400">
+                                    <option value="obs">No, solo observa y mide sin intervenir (Observacional)</option>
+                                    <option value="exp">Sí, asigna un tratamiento o programa preventivo (Experimental)</option>
+                                </select>
+                            </div>
+
+                            <div id="wiz-obs-options">
+                                <label class="block text-slate-300 font-semibold mb-1">2. ¿Cuál es la unidad de análisis y dirección temporal?</label>
+                                <select id="wiz-q2-obs" onchange="updateWizard()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-emerald-400">
+                                    <option value="study-1">Pacientes con enfermedad rara sin grupo control (Descriptivo)</option>
+                                    <option value="study-2">Promedios poblacionales de cantones o provincias (Agregado)</option>
+                                    <option value="study-3">Muestra medida una sola vez: Exposición y Efecto simultáneos (Corte t0)</option>
+                                    <option value="study-4">Parte de Enfermos (Casos) vs. Sanos (Controles) mirando al pasado</option>
+                                    <option value="study-5">Parte de Expuestos vs. No Expuestos sanos seguidos hacia el futuro</option>
+                                </select>
+                            </div>
+
+                            <div id="wiz-exp-options" class="hidden">
+                                <label class="block text-slate-300 font-semibold mb-1">2. ¿A quién se asigna la intervención experimental?</label>
+                                <select id="wiz-q2-exp" onchange="updateWizard()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-emerald-400">
+                                    <option value="study-6">A individuos asignados al azar 1:1 (Ensayo Clínico Aleatorizado)</option>
+                                    <option value="study-7">A comunidades o parroquias enteras (Ensayo Comunitario / Cluster)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 bg-emerald-950/80 border border-emerald-500/40 rounded-xl p-4">
+                        <div class="text-[10px] uppercase font-bold text-emerald-300">Diseño Recomendado por el Asistente</div>
+                        <div id="wiz-result-title" class="text-base font-extrabold text-white mt-0.5">1. Reporte y Serie de Casos</div>
+                        <div id="wiz-result-stat" class="text-xs text-emerald-200 mt-1">Estadístico: Proporción (%), Media (&mu; &plusmn; DE), Puntaje Z</div>
+                        <button id="wiz-goto-btn" onclick="scrollToStudy('study-1')" class="mt-3 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 shadow">
+                            <span>Ver Estudio Ecuatoriano de este Diseño</span>
+                            <i data-lucide="arrow-down-circle" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- GRILLA DETALLADA DE ESTUDIOS EPIDEMIOLÓGICOS -->
         <section class="mb-14">
-            <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 border-b border-slate-200 pb-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-slate-200 pb-4">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800">Análisis Detallado por Tipo de Estudio (Casos del Ecuador)</h2>
-                    <p class="text-sm text-slate-500">Conceptos, representación simbólica, fórmulas estadísticas explícitas y evidencia científica ecuatoriana</p>
+                    <p class="text-sm text-slate-500">Haz clic en las provincias para filtrar o explora las pestañas de Metodología, Estadísticos y Limitaciones en cada tarjeta</p>
                 </div>
                 <div class="mt-2 md:mt-0 flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600">
                     <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-teal-600 inline-block"></span> Descriptivo</span>
@@ -249,12 +446,26 @@
                 </div>
             </div>
 
+            <!-- Filtro Interactivo por Provincia del Ecuador -->
+            <div class="no-print flex flex-wrap items-center gap-2 mb-8 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1 px-2">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-rose-600"></i> Filtrar por Territorio en Ecuador:
+                </span>
+                <button onclick="filterByProvince('all')" class="prov-btn bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="all">Todo el País (7)</button>
+                <button onclick="filterByProvince('loja')" class="prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="loja">Loja y El Oro (2)</button>
+                <button onclick="filterByProvince('pichincha')" class="prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="pichincha">Pichincha / Cayambe - Orozco (1)</button>
+                <button onclick="filterByProvince('azuay')" class="prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="azuay">Azuay / Cuenca (1)</button>
+                <button onclick="filterByProvince('cotopaxi')" class="prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="cotopaxi">Cotopaxi (1)</button>
+                <button onclick="filterByProvince('esmeraldas')" class="prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="esmeraldas">Esmeraldas (1)</button>
+                <button onclick="filterByProvince('nacional')" class="prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition" data-prov="nacional">221 Cantones INEC (1)</button>
+            </div>
+
             <div class="grid grid-cols-1 gap-10" id="studies-container">
 
                 <!-- ==========================================
                      ESTUDIO 1: REPORTE Y SERIES DE CASOS (ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional">
+                <article id="study-1" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional" data-province="loja">
                     <div class="bg-gradient-to-r from-teal-700 to-teal-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <!-- Símbolo / Imagen Vectorial -->
@@ -351,8 +562,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Rosenbloom, A. L., Guevara-Aguirre, J., Rosenfeld, R. G., &amp; Fielder, P. J. (1990). The little women of Loja—Growth hormone-receptor deficiency in an inbred population of southern Ecuador. <em>The New England Journal of Medicine</em>, 323(20), 1367–1374. https://doi.org/10.1056/NEJM199011153232002
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-1"><strong>Referencia:</strong> Rosenbloom, A. L., Guevara-Aguirre, J., Rosenfeld, R. G., &amp; Fielder, P. J. (1990). The little women of Loja—Growth hormone-receptor deficiency in an inbred population of southern Ecuador. <em>The New England Journal of Medicine</em>, 323(20), 1367–1374. https://doi.org/10.1056/NEJM199011153232002</span>
+                                <button onclick="copyCitation('ref-1')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -361,7 +573,7 @@
                 <!-- ==========================================
                      ESTUDIO 2: ESTUDIOS ECOLÓGICOS (ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional">
+                <article id="study-2" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional" data-province="nacional">
                     <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
@@ -454,8 +666,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Ortiz-Prado, E., Izquierdo-Condoy, J. S., Fernández-Naranjo, R., Vásconez-González, J., Cano, L., &amp; Coral-Almeida, M. (2023). Epidemiological characterization of ischemic heart disease at different altitudes: A nationwide population-based analysis from 2011 to 2021 in Ecuador. <em>PLOS ONE</em>, 18(12), e0295586. https://doi.org/10.1371/journal.pone.0295586
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-2"><strong>Referencia:</strong> Ortiz-Prado, E., Izquierdo-Condoy, J. S., Fernández-Naranjo, R., Vásconez-González, J., Cano, L., &amp; Coral-Almeida, M. (2023). Epidemiological characterization of ischemic heart disease at different altitudes: A nationwide population-based analysis from 2011 to 2021 in Ecuador. <em>PLOS ONE</em>, 18(12), e0295586. https://doi.org/10.1371/journal.pone.0295586</span>
+                                <button onclick="copyCitation('ref-2')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -464,7 +677,7 @@
                 <!-- ==========================================
                      ESTUDIO 3: ESTUDIOS TRANSVERSALES (OROZCO ET AL. - ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional">
+                <article id="study-3" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional" data-province="pichincha">
                     <div class="bg-gradient-to-r from-cyan-700 to-cyan-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
@@ -556,8 +769,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Handal, A. J., Lozoff, B., Breilh, J., &amp; Harlow, S. D. [con Orozco, F.]. (2007). Effect of community of residence on neurobehavioral development in infants and young children in a flower-growing region of Ecuador. <em>Environmental Health Perspectives</em>, 115(1), 128–133. https://doi.org/10.1289/ehp.9261 <em>(Ver también: Handal, A. J., Harlow, S. D., Breilh, J., &amp; Lozoff, B., 2007, J. Epidemiol. Community Health).</em>
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-3"><strong>Referencia:</strong> Handal, A. J., Lozoff, B., Breilh, J., &amp; Harlow, S. D. [con Orozco, F.]. (2007). Effect of community of residence on neurobehavioral development in infants and young children in a flower-growing region of Ecuador. <em>Environmental Health Perspectives</em>, 115(1), 128–133. https://doi.org/10.1289/ehp.9261</span>
+                                <button onclick="copyCitation('ref-3')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -566,7 +780,7 @@
                 <!-- ==========================================
                      ESTUDIO 4: CASOS Y CONTROLES (ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional">
+                <article id="study-4" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional" data-province="azuay">
                     <div class="bg-gradient-to-r from-indigo-700 to-indigo-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
@@ -658,8 +872,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Palacios Sacoto, J. A., Ochoa Brito, T. M., &amp; Astudillo Neira, E. P. (2020). Factores asociados a Síndrome de Dificultad Respiratoria del Recién Nacido del Hospital José Carrasco Arteaga. Estudio de casos y controles. <em>Revista Ecuatoriana de Pediatría</em>, 21(3), Artículo 24, 1–8. https://doi.org/10.52011/0083
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-4"><strong>Referencia:</strong> Palacios Sacoto, J. A., Ochoa Brito, T. M., &amp; Astudillo Neira, E. P. (2020). Factores asociados a Síndrome de Dificultad Respiratoria del Recién Nacido del Hospital José Carrasco Arteaga. Estudio de casos y controles. <em>Revista Ecuatoriana de Pediatría</em>, 21(3), Artículo 24, 1–8. https://doi.org/10.52011/0083</span>
+                                <button onclick="copyCitation('ref-4')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -668,7 +883,7 @@
                 <!-- ==========================================
                      ESTUDIO 5: ESTUDIOS DE COHORTES (ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional">
+                <article id="study-5" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="observacional" data-province="loja">
                     <div class="bg-gradient-to-r from-blue-700 to-blue-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
@@ -759,8 +974,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Guevara-Aguirre, J., Balasubramanian, P., Guevara-Aguirre, M., Wei, M., Madia, F., Cheng, C.-W., Hwang, D., Martin-Montalvo, A., Saavedra, J., Ingles, S., de Cabo, R., Cohen, P., &amp; Longo, V. D. (2011). Growth hormone receptor deficiency is associated with a major reduction in pro-aging signaling, cancer, and diabetes in humans. <em>Science Translational Medicine</em>, 3(70), 70ra13. https://doi.org/10.1126/scitranslmed.3001845
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-5"><strong>Referencia:</strong> Guevara-Aguirre, J., Balasubramanian, P., Guevara-Aguirre, M., Wei, M., Madia, F., Cheng, C.-W., Hwang, D., Martin-Montalvo, A., Saavedra, J., Ingles, S., de Cabo, R., Cohen, P., &amp; Longo, V. D. (2011). Growth hormone receptor deficiency is associated with a major reduction in pro-aging signaling, cancer, and diabetes in humans. <em>Science Translational Medicine</em>, 3(70), 70ra13. https://doi.org/10.1126/scitranslmed.3001845</span>
+                                <button onclick="copyCitation('ref-5')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -769,7 +985,7 @@
                 <!-- ==========================================
                      ESTUDIO 6: ENSAYO CLÍNICO ALEATORIZADO (ECA - ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="experimental">
+                <article id="study-6" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="experimental" data-province="cotopaxi">
                     <div class="bg-gradient-to-r from-purple-800 to-purple-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
@@ -860,8 +1076,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Iannotti, L. L., Lutter, C. K., Stewart, C. P., Gallegos Riofrío, C. A., Malo, C., Reinhart, G., Palacios, A., Karp, C., Chapnick, M., Cox, K., &amp; Waters, W. F. (2017). Eggs in early complementary feeding and child growth: A randomized controlled trial. <em>Pediatrics</em>, 140(1), e20163459. https://doi.org/10.1542/peds.2016-3459
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-6"><strong>Referencia:</strong> Iannotti, L. L., Lutter, C. K., Stewart, C. P., Gallegos Riofrío, C. A., Malo, C., Reinhart, G., Palacios, A., Karp, C., Chapnick, M., Cox, K., &amp; Waters, W. F. (2017). Eggs in early complementary feeding and child growth: A randomized controlled trial. <em>Pediatrics</em>, 140(1), e20163459. https://doi.org/10.1542/peds.2016-3459</span>
+                                <button onclick="copyCitation('ref-6')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -870,7 +1087,7 @@
                 <!-- ==========================================
                      ESTUDIO 7: ENSAYOS COMUNITARIOS Y DE CAMPO (ECUADOR)
                      ========================================== -->
-                <article class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="experimental">
+                <article id="study-7" class="study-card bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden transition-all" data-category="experimental" data-province="esmeraldas">
                     <div class="bg-gradient-to-r from-fuchsia-800 to-fuchsia-600 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center space-x-4">
                             <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
@@ -961,8 +1178,9 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic">
-                                <strong>Referencia:</strong> Moncayo, A. L., Vaca, M., Amorim, L., Rodríguez, A., Erazo, S., Oviedo, G., Quinzo, I., Padilla, M., Chico, M., Lovato, R., Gómez, E., Barreto, M. L., &amp; Cooper, P. J. (2008). Impact of long-term treatment with ivermectin on the prevalence and intensity of soil-transmitted helminth infections. <em>PLoS Neglected Tropical Diseases</em>, 2(9), e293. https://doi.org/10.1371/journal.pntd.0000293
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500 italic flex items-center justify-between gap-2">
+                                <span id="ref-7"><strong>Referencia:</strong> Moncayo, A. L., Vaca, M., Amorim, L., Rodríguez, A., Erazo, S., Oviedo, G., Quinzo, I., Padilla, M., Chico, M., Lovato, R., Gómez, E., Barreto, M. L., &amp; Cooper, P. J. (2008). Impact of long-term treatment with ivermectin on the prevalence and intensity of soil-transmitted helminth infections. <em>PLoS Neglected Tropical Diseases</em>, 2(9), e293. https://doi.org/10.1371/journal.pntd.0000293</span>
+                                <button onclick="copyCitation('ref-7')" class="no-print shrink-0 not-italic px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] transition">Copiar cita</button>
                             </div>
                         </div>
                     </div>
@@ -1049,35 +1267,36 @@
                 <div>
                     <h3 class="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
                         <i data-lucide="triangle" class="w-5 h-5 text-purple-600"></i>
-                        <span>Jerarquía de Evidencia Primaria</span>
+                        <span>Jerarquía de Evidencia (Interactiva)</span>
                     </h3>
-                    <p class="text-xs text-slate-500 mb-6">A medida que se asciende en la pirámide, disminuye el riesgo de sesgo y aumenta la solidez bioestadística para demostrar causalidad.</p>
+                    <p class="text-xs text-slate-500 mb-4">Haz clic en cualquier escalón de la pirámide para inspeccionar su nivel de causalidad y saltar al estudio ecuatoriano:</p>
                 </div>
 
-                <!-- Pirámide Visual -->
+                <!-- Pirámide Visual Interactiva -->
                 <div class="flex flex-col items-center space-y-2 my-auto">
-                    <div class="w-2/5 bg-gradient-to-r from-purple-700 to-purple-600 text-white text-center py-2.5 px-2 rounded-t-xl text-[11px] font-bold shadow-sm">
-                        Ensayos Clínicos (ECA)
+                    <div onclick="inspectPyramid(6)" class="pyramid-level w-2/5 bg-gradient-to-r from-purple-700 to-purple-600 text-white text-center py-2.5 px-2 rounded-t-xl text-[11px] font-bold shadow-sm">
+                        6. Ensayos Clínicos (ECA)
                     </div>
-                    <div class="w-3/5 bg-gradient-to-r from-fuchsia-700 to-fuchsia-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
-                        Ensayos Comunitarios / De Campo
+                    <div onclick="inspectPyramid(7)" class="pyramid-level w-3/5 bg-gradient-to-r from-fuchsia-700 to-fuchsia-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
+                        7. Ensayos Comunitarios / De Campo
                     </div>
-                    <div class="w-4/5 bg-gradient-to-r from-blue-700 to-blue-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
-                        Estudios de Cohortes (RR)
+                    <div onclick="inspectPyramid(5)" class="pyramid-level w-4/5 bg-gradient-to-r from-blue-700 to-blue-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
+                        5. Estudios de Cohortes (RR)
                     </div>
-                    <div class="w-11/12 bg-gradient-to-r from-indigo-700 to-indigo-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
-                        Estudios de Casos y Controles (OR)
+                    <div onclick="inspectPyramid(4)" class="pyramid-level w-11/12 bg-gradient-to-r from-indigo-700 to-indigo-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
+                        4. Estudios de Casos y Controles (OR)
                     </div>
-                    <div class="w-full bg-gradient-to-r from-cyan-700 to-cyan-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
-                        Estudios Transversales (P / RP)
+                    <div onclick="inspectPyramid(3)" class="pyramid-level w-full bg-gradient-to-r from-cyan-700 to-cyan-600 text-white text-center py-2.5 px-2 rounded text-[11px] font-bold shadow-sm">
+                        3. Estudios Transversales (P / RP / &beta;)
                     </div>
-                    <div class="w-full bg-gradient-to-r from-emerald-700 to-teal-700 text-white text-center py-2.5 px-2 rounded-b-xl text-[11px] font-bold shadow-sm">
-                        Estudios Ecológicos (r) y Series de Casos (%)
+                    <div onclick="inspectPyramid(1)" class="pyramid-level w-full bg-gradient-to-r from-emerald-700 to-teal-700 text-white text-center py-2.5 px-2 rounded-b-xl text-[11px] font-bold shadow-sm">
+                        1 y 2. Ecológicos (r) y Series de Casos (%)
                     </div>
                 </div>
 
-                <div class="mt-6 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <strong>Nota Metodológica:</strong> Las Revisiones Sistemáticas y Metaanálisis se ubican en la cúspide por encima de los estudios primarios como diseños de <em>investigación secundaria</em> (integración estadística de múltiples estudios).
+                <div id="pyramid-info-box" class="mt-5 text-[11px] text-slate-700 bg-purple-50 p-3.5 rounded-xl border border-purple-200 transition-all">
+                    <strong class="text-purple-900 block mb-0.5">Nivel Seleccionado: Cúspide Primaria (ECA)</strong>
+                    <span>Máximo control de sesgos gracias a la asignación aleatoria. Permite calcular RR, RRR y NNT (Ej: Proyecto Lulun en Cotopaxi).</span>
                 </div>
             </div>
 
@@ -1145,6 +1364,279 @@
         // Inicializar iconos de Lucide
         lucide.createIcons();
 
+        // Modo de visualización de pestañas dentro de las tarjetas
+        let compactTabsMode = false;
+
+        // Inicializar barras de pestañas dinámicamente en cada tarjeta de estudio
+        function setupInteractiveStudyTabs() {
+            const cards = document.querySelectorAll('.study-card');
+            cards.forEach((card, idx) => {
+                const blocksContainer = card.querySelector('.space-y-4.text-xs');
+                if (!blocksContainer) return;
+                const panels = blocksContainer.children;
+                if (panels.length < 3) return;
+
+                panels[0].classList.add('tab-panel', 'panel-met');
+                panels[1].classList.add('tab-panel', 'panel-res');
+                panels[2].classList.add('tab-panel', 'panel-lim');
+
+                // Crear botonera interactiva encima de los paneles
+                const tabBar = document.createElement('div');
+                tabBar.className = 'no-print flex flex-wrap items-center gap-1.5 mb-3 bg-slate-200/70 p-1 rounded-xl';
+                tabBar.innerHTML = `
+                    <button onclick="switchCardTab(${idx}, 'all', this)" class="tab-btn active flex-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg transition">Todo</button>
+                    <button onclick="switchCardTab(${idx}, 'met', this)" class="tab-btn flex-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg text-slate-600 hover:bg-white/60 transition">1. Metodología</button>
+                    <button onclick="switchCardTab(${idx}, 'res', this)" class="tab-btn flex-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg text-slate-600 hover:bg-white/60 transition">2. Estadísticos</button>
+                    <button onclick="switchCardTab(${idx}, 'lim', this)" class="tab-btn flex-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg text-slate-600 hover:bg-white/60 transition">3. Limitaciones</button>
+                `;
+                blocksContainer.parentNode.insertBefore(tabBar, blocksContainer);
+            });
+        }
+
+        function switchCardTab(cardIndex, mode, btnEl) {
+            const card = document.querySelectorAll('.study-card')[cardIndex];
+            if (!card) return;
+            const btns = btnEl.parentNode.querySelectorAll('.tab-btn');
+            btns.forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-slate-600');
+            });
+            btnEl.classList.add('active');
+            btnEl.classList.remove('text-slate-600');
+
+            const met = card.querySelector('.panel-met');
+            const res = card.querySelector('.panel-res');
+            const lim = card.querySelector('.panel-lim');
+
+            if (mode === 'all') {
+                met.style.display = 'block';
+                res.style.display = 'block';
+                lim.style.display = 'block';
+            } else if (mode === 'met') {
+                met.style.display = 'block';
+                res.style.display = 'none';
+                lim.style.display = 'none';
+            } else if (mode === 'res') {
+                met.style.display = 'none';
+                res.style.display = 'block';
+                lim.style.display = 'none';
+            } else if (mode === 'lim') {
+                met.style.display = 'none';
+                res.style.display = 'none';
+                lim.style.display = 'block';
+            }
+        }
+
+        function toggleAllTabsMode() {
+            compactTabsMode = !compactTabsMode;
+            const label = document.getElementById('expand-tabs-text');
+            const cards = document.querySelectorAll('.study-card');
+            cards.forEach((card, idx) => {
+                const tabBtns = card.querySelectorAll('.tab-btn');
+                if (tabBtns.length >= 2) {
+                    if (compactTabsMode) {
+                        switchCardTab(idx, 'res', tabBtns[2]);
+                        label.innerText = 'Ver Todo Expandido';
+                    } else {
+                        switchCardTab(idx, 'all', tabBtns[0]);
+                        label.innerText = 'Modo Pestañas';
+                    }
+                }
+            });
+            showToast(compactTabsMode ? 'Mostrando pestaña de Resultados y Estadísticos' : 'Todas las secciones expandidas');
+        }
+
+        // Mostrar notificación flotante
+        function showToast(message) {
+            const toast = document.getElementById('toast-msg');
+            const text = document.getElementById('toast-text');
+            text.innerText = message;
+            toast.classList.remove('hidden');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2800);
+        }
+
+        // Copiar referencia bibliográfica
+        function copyCitation(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const rawText = el.innerText.replace(/^Referencia:\s*/i, '');
+            const tempInput = document.createElement('textarea');
+            tempInput.value = rawText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast('Cita copiada al portapapeles');
+        }
+
+        // Desplazamiento suave hacia un estudio y resaltado
+        function scrollToStudy(studyId) {
+            filterStudies('all');
+            filterByProvince('all');
+            const target = document.getElementById(studyId);
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('ring-4', 'ring-amber-400');
+            setTimeout(() => {
+                target.classList.remove('ring-4', 'ring-amber-400');
+            }, 2200);
+        }
+
+        // Buscador en tiempo real
+        function searchStudies(query) {
+            const q = query.trim().toLowerCase();
+            const cards = document.querySelectorAll('.study-card');
+            cards.forEach(card => {
+                const content = card.innerText.toLowerCase();
+                card.style.display = content.includes(q) ? 'block' : 'none';
+            });
+        }
+
+        // Filtro por provincia del Ecuador
+        function filterByProvince(prov) {
+            const cards = document.querySelectorAll('.study-card');
+            const btns = document.querySelectorAll('.prov-btn');
+            btns.forEach(b => {
+                if (b.dataset.prov === prov) {
+                    b.className = 'prov-btn bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full transition';
+                } else {
+                    b.className = 'prov-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full transition';
+                }
+            });
+            cards.forEach(card => {
+                if (prov === 'all' || card.dataset.province === prov) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Calculadora 2x2 en tiempo real
+        function recalc2x2() {
+            const a = Math.max(0.5, parseFloat(document.getElementById('cell-a').value) || 0);
+            const b = Math.max(0.5, parseFloat(document.getElementById('cell-b').value) || 0);
+            const c = Math.max(0.5, parseFloat(document.getElementById('cell-c').value) || 0);
+            const d = Math.max(0.5, parseFloat(document.getElementById('cell-d').value) || 0);
+
+            const nExp = a + b;
+            const nNoExp = c + d;
+            document.getElementById('row-exp-total').innerText = Math.round(nExp);
+            document.getElementById('row-noexp-total').innerText = Math.round(nNoExp);
+
+            const orVal = (a * d) / (b * c);
+            const seLnOR = Math.sqrt(1/a + 1/b + 1/c + 1/d);
+            const orLow = Math.exp(Math.log(orVal) - 1.96 * seLnOR);
+            const orHigh = Math.exp(Math.log(orVal) + 1.96 * seLnOR);
+
+            const ie = a / nExp;
+            const i0 = c / nNoExp;
+            const rrVal = ie / i0;
+            const rar = ie - i0;
+            const rrr = (1 - rrVal) * 100;
+            const nnt = Math.abs(rar) > 0.0001 ? Math.ceil(1 / Math.abs(rar)) : '∞';
+
+            document.getElementById('res-or').innerText = orVal.toFixed(2);
+            document.getElementById('res-or-ci').innerText = `IC95%: ${orLow.toFixed(2)}–${orHigh.toFixed(2)}`;
+            document.getElementById('res-rr').innerText = rrVal.toFixed(2);
+            document.getElementById('res-inc').innerText = `Ie: ${(ie*100).toFixed(1)}% | I0: ${(i0*100).toFixed(1)}%`;
+            document.getElementById('res-rrr').innerText = `${rrr > 0 ? '-' : '+'}${Math.abs(rrr).toFixed(1)}%`;
+            document.getElementById('res-rar').innerText = `Dif. Abs: ${(rar*100).toFixed(1)}%`;
+            document.getElementById('res-nnt').innerText = nnt;
+
+            const interpBox = document.getElementById('calc-interpretation');
+            if (orLow > 1) {
+                interpBox.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span><strong>Factor de Riesgo Significativo:</strong> OR = ${orVal.toFixed(2)} y RR = ${rrVal.toFixed(2)} (el IC 95% no incluye al 1). La exposición incrementa el riesgo del evento.</span>`;
+            } else if (orHigh < 1) {
+                interpBox.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 shrink-0"></i><span><strong>Factor Protector / Intervención Eficaz:</strong> OR = ${orVal.toFixed(2)} y RR = ${rrVal.toFixed(2)} (&lt; 1). Reduce el riesgo relativo en un <strong>${Math.abs(rrr).toFixed(1)}%</strong> con un NNT de <strong>${nnt}</strong>.</span>`;
+            } else {
+                interpBox.innerHTML = `<i data-lucide="minus-circle" class="w-4 h-4 text-amber-400 shrink-0"></i><span><strong>Asociación No Significativa:</strong> El intervalo de confianza al 95% (${orLow.toFixed(2)}–${orHigh.toFixed(2)}) cruza el valor nulo (1.0).</span>`;
+            }
+            lucide.createIcons();
+        }
+
+        function loadPreset(preset) {
+            const label = document.getElementById('preset-label');
+            if (preset === 'cuenca') {
+                document.getElementById('cell-a').value = 136;
+                document.getElementById('cell-b').value = 184;
+                document.getElementById('cell-c').value = 52;
+                document.getElementById('cell-d').value = 192;
+                label.innerText = 'Datos: Hospital IESS Cuenca (Cesárea y SDR Neonatal, OR ≈ 2.74)';
+            } else if (preset === 'cotopaxi') {
+                document.getElementById('cell-a').value = 15;
+                document.getElementById('cell-b').value = 68;
+                document.getElementById('cell-c').value = 27;
+                document.getElementById('cell-d').value = 53;
+                label.innerText = 'Datos: ECA Proyecto Lulun Cotopaxi (Desnutrición Crónica, RP ≈ 0.53)';
+            } else if (preset === 'esmeraldas') {
+                document.getElementById('cell-a').value = 95;
+                document.getElementById('cell-b').value = 210;
+                document.getElementById('cell-c').value = 220;
+                document.getElementById('cell-d').value = 50;
+                label.innerText = 'Datos: Ensayo Comunitario Esmeraldas (Ivermectina vs Trichuris, OR ≈ 0.10)';
+            }
+            recalc2x2();
+            showToast('Datos del estudio ecuatoriano cargados en la calculadora');
+        }
+
+        // Árbol de decisión interactivo (Wizard)
+        function updateWizard() {
+            const q1 = document.getElementById('wiz-q1').value;
+            const obsDiv = document.getElementById('wiz-obs-options');
+            const expDiv = document.getElementById('wiz-exp-options');
+            const titleEl = document.getElementById('wiz-result-title');
+            const statEl = document.getElementById('wiz-result-stat');
+            const btnEl = document.getElementById('wiz-goto-btn');
+
+            let selectedStudy = 'study-1';
+            if (q1 === 'obs') {
+                obsDiv.classList.remove('hidden');
+                expDiv.classList.add('hidden');
+                selectedStudy = document.getElementById('wiz-q2-obs').value;
+            } else {
+                obsDiv.classList.add('hidden');
+                expDiv.classList.remove('hidden');
+                selectedStudy = document.getElementById('wiz-q2-exp').value;
+            }
+
+            const map = {
+                'study-1': { title: '1. Reporte y Serie de Casos (Loja)', stat: 'Estadísticos: Proporción (%), Media (μ ± DE), Puntaje Z' },
+                'study-2': { title: '2. Estudio Ecológico (221 Cantones INEC)', stat: 'Estadísticos: Correlación (r), Regresión (β), Tasas / 100.000 hab.' },
+                'study-3': { title: '3. Estudio Transversal de Corte (Cayambe - Orozco)', stat: 'Estadísticos: Prevalencia (P), Razón de Prevalencias (RP), β' },
+                'study-4': { title: '4. Estudio de Casos y Controles (Cuenca)', stat: 'Estadísticos: Odds Ratio (OR = a·d / b·c), IC 95%, χ²' },
+                'study-5': { title: '5. Estudio de Cohortes (Sur de Ecuador - 22 años)', stat: 'Estadísticos: Incidencia (TI) y Riesgo Relativo (RR = Ie / I0)' },
+                'study-6': { title: '6. Ensayo Clínico Aleatorizado - ECA (Cotopaxi)', stat: 'Estadísticos: RR / RP, Reducción Relativa del Riesgo (RRR) y NNT' },
+                'study-7': { title: '7. Ensayo Comunitario por Conglomerados (Esmeraldas)', stat: 'Estadísticos: OR y RR multinivel ajustados por cluster' }
+            };
+
+            titleEl.innerText = map[selectedStudy].title;
+            statEl.innerText = map[selectedStudy].stat;
+            btnEl.setAttribute('onclick', `scrollToStudy('${selectedStudy}')`);
+        }
+
+        // Inspector de la Pirámide de Evidencia
+        function inspectPyramid(level) {
+            const infoBox = document.getElementById('pyramid-info-box');
+            const data = {
+                6: { title: '6. Ensayos Clínicos Aleatorizados (ECA)', desc: 'Cúspide primaria. La aleatorización controla factores confusores. Ejemplo en Ecuador: Proyecto Lulun en Cotopaxi (RP = 0.53; RRR = 47%).', id: 'study-6' },
+                7: { title: '7. Ensayos Comunitarios y de Campo', desc: 'Intervención experimental sobre comunidades completas. Ejemplo en Ecuador: Tratamiento con ivermectina en 58 comunidades de Esmeraldas (OR = 0.06).', id: 'study-7' },
+                5: { title: '5. Estudios de Cohortes (Seguimiento)', desc: 'Mayor evidencia observacional (Causa → Efecto). Mide Incidencia y Riesgo Relativo (RR). Ejemplo en Ecuador: Cohorte Laron de 22 años en Loja.', id: 'study-5' },
+                4: { title: '4. Estudios de Casos y Controles', desc: 'Parte del efecto hacia la causa pasada. Calcula Odds Ratio (OR). Ejemplo en Ecuador: Factores de riesgo de SDR neonatal en Cuenca.', id: 'study-4' },
+                3: { title: '3. Estudios Transversales (De Prevalencia)', desc: 'Mide exposición y enfermedad en un único corte temporal (t0). Ejemplo en Ecuador: Plaguicidas y neurodesarrollo en Cayambe (Handal, Breilh y Orozco, 2007).', id: 'study-3' },
+                1: { title: '1 y 2. Estudios Ecológicos y Series de Casos', desc: 'Base generadora de hipótesis mediante correlaciones grupales (r) o caracterización clínica (% y Puntaje Z). Ejemplos en Ecuador: Loja y 221 cantones INEC.', id: 'study-1' }
+            };
+            const item = data[level];
+            infoBox.innerHTML = `
+                <strong class="text-purple-900 block mb-1">${item.title}</strong>
+                <span class="block mb-2">${item.desc}</span>
+                <button onclick="scrollToStudy('${item.id}')" class="no-print text-[10px] font-bold bg-purple-700 text-white px-2.5 py-1 rounded hover:bg-purple-800 transition">Ir a este estudio &rarr;</button>
+            `;
+        }
+
         // Función de filtrado interactivo por categoría
         function filterStudies(category) {
             const cards = document.querySelectorAll('.study-card');
@@ -1182,8 +1674,10 @@
 
         // Función para descargar directamente el archivo en PDF
         function downloadDirectPDF() {
-            // Asegurar que todos los estudios estén visibles antes de exportar
+            // Asegurar que todos los estudios y paneles estén visibles antes de exportar
             filterStudies('all');
+            filterByProvince('all');
+            document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'block');
 
             const btn = document.getElementById('btn-pdf');
             const btnText = document.getElementById('pdf-btn-text');
@@ -1211,6 +1705,13 @@
                 window.print();
             });
         }
+
+        // Inicializar componentes interactivos al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            setupInteractiveStudyTabs();
+            recalc2x2();
+            updateWizard();
+        });
     </script>
 </body>
 </html>
